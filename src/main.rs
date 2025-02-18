@@ -1,42 +1,16 @@
 use std::{
-    ffi::{c_void, CString},
+    ffi::c_void,
     mem::{self, size_of},
 };
 
 use gl::{
-    types::{GLchar, GLint, GLuint, GLvoid},
-    ARRAY_BUFFER, COLOR_BUFFER_BIT, COMPILE_STATUS, FRAGMENT_SHADER, INFO_LOG_LENGTH, LINK_STATUS,
-    STATIC_DRAW, VERTEX_SHADER,
+    types::{GLuint, GLvoid},
+    ARRAY_BUFFER, COLOR_BUFFER_BIT, STATIC_DRAW,
 };
 use glfw::{Action, Context};
+use shader::Shader;
 
-const VERTEX_SHADER_SOURCE: &str = r#"
-#version 330 core
-
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
-
-out vec3 ourColor;
-
-void main()
-{
-    gl_Position = vec4(aPos, 1.0);
-    ourColor = aColor;
-}
-"#;
-
-const FRAGMENT_SHADER_SOURCE: &str = r#"
-#version 330 core
-
-out vec4 FragColor;
-in vec3 ourColor;
-
-void main()
-{
-    FragColor = vec4(ourColor, 1.0f);
-    
-} 
-"#;
+mod shader;
 
 fn main() {
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
@@ -54,101 +28,7 @@ fn main() {
     window.make_current();
     window.set_framebuffer_size_polling(true);
 
-    let vertex_shader: u32;
-    unsafe {
-        vertex_shader = gl::CreateShader(VERTEX_SHADER);
-        gl::ShaderSource(
-            vertex_shader,
-            1,
-            &CString::new(VERTEX_SHADER_SOURCE).unwrap().as_ptr(),
-            std::ptr::null(),
-        );
-        gl::CompileShader(vertex_shader);
-
-        let mut success = gl::FALSE as GLint;
-        gl::GetShaderiv(vertex_shader, COMPILE_STATUS, &mut success);
-
-        if success != gl::TRUE as GLint {
-            let mut len = 0;
-            gl::GetShaderiv(vertex_shader, INFO_LOG_LENGTH, &mut len);
-
-            let mut buffer: Vec<u8> = vec![0; len as usize];
-            gl::GetShaderInfoLog(
-                vertex_shader,
-                len,
-                std::ptr::null_mut(),
-                buffer.as_mut_ptr() as *mut GLchar,
-            );
-            eprintln!(
-                "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n{}",
-                String::from_utf8_lossy(&buffer)
-            );
-        }
-    };
-
-    let fragment_shader: u32;
-    unsafe {
-        fragment_shader = gl::CreateShader(FRAGMENT_SHADER);
-        gl::ShaderSource(
-            fragment_shader,
-            1,
-            &CString::new(FRAGMENT_SHADER_SOURCE).unwrap().as_ptr(),
-            std::ptr::null(),
-        );
-        gl::CompileShader(fragment_shader);
-
-        let mut success = gl::FALSE as GLint;
-        gl::GetShaderiv(fragment_shader, COMPILE_STATUS, &mut success);
-
-        if success != gl::TRUE as GLint {
-            let mut len = 0;
-            gl::GetShaderiv(fragment_shader, INFO_LOG_LENGTH, &mut len);
-
-            let mut buffer: Vec<u8> = vec![0; len as usize];
-            gl::GetShaderInfoLog(
-                fragment_shader,
-                len,
-                std::ptr::null_mut(),
-                buffer.as_mut_ptr() as *mut GLchar,
-            );
-            eprintln!(
-                "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n{}",
-                String::from_utf8_lossy(&buffer)
-            );
-        }
-    }
-
-    let shader_program: u32;
-    unsafe {
-        shader_program = gl::CreateProgram();
-
-        gl::AttachShader(shader_program, vertex_shader);
-        gl::AttachShader(shader_program, fragment_shader);
-        gl::LinkProgram(shader_program);
-
-        let mut success = gl::FALSE as GLint;
-        gl::GetProgramiv(shader_program, LINK_STATUS, &mut success);
-
-        if success != gl::TRUE as GLint {
-            let mut len = 0;
-            gl::GetProgramiv(shader_program, INFO_LOG_LENGTH, &mut len);
-
-            let mut buffer: Vec<u8> = vec![0; len as usize];
-            gl::GetProgramInfoLog(
-                shader_program,
-                len,
-                std::ptr::null_mut(),
-                buffer.as_mut_ptr() as *mut GLchar,
-            );
-            eprintln!(
-                "ERROR::SHADER::PROGRAM::LINKING_FAILED\n{}",
-                String::from_utf8_lossy(&buffer)
-            );
-        }
-
-        gl::DeleteShader(vertex_shader);
-        gl::DeleteShader(fragment_shader);
-    }
+    let our_shader = Shader::new("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl").unwrap();
 
     #[rustfmt::skip]
     let vertices: [f32; 18] = [
@@ -201,7 +81,7 @@ fn main() {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(COLOR_BUFFER_BIT);
 
-            gl::UseProgram(shader_program);
+            our_shader.use_shader();
             gl::BindVertexArray(vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
         };

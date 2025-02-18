@@ -5,8 +5,8 @@ use std::{
 
 use gl::{
     types::{GLchar, GLint, GLuint, GLvoid},
-    ARRAY_BUFFER, COLOR_BUFFER_BIT, COMPILE_STATUS, FRAGMENT_SHADER, INFO_LOG_LENGTH, LINK_STATUS,
-    STATIC_DRAW, VERTEX_SHADER,
+    ARRAY_BUFFER, COLOR_BUFFER_BIT, COMPILE_STATUS, ELEMENT_ARRAY_BUFFER, FRAGMENT_SHADER,
+    INFO_LOG_LENGTH, LINK_STATUS, STATIC_DRAW, TRIANGLES, UNSIGNED_INT, VERTEX_SHADER,
 };
 use glfw::{Action, Context};
 
@@ -142,15 +142,37 @@ fn main() {
         gl::DeleteShader(fragment_shader);
     }
 
-    let vertices: [f32; 9] = [-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0];
+    #[rustfmt::skip]
+    let vertices: [f32; 12] = [
+             0.5,  0.5, 0.0,
+             0.5, -0.5, 0.0,
+            -0.5, -0.5, 0.0,
+            -0.5,  0.5, 0.0
+    ];
+
+    #[rustfmt::skip]
+    let indices: [i32; 6] = [
+        0, 1, 3,
+        1, 2, 3
+    ];
 
     let mut vao: GLuint = 0;
     let mut vbo: GLuint = 0;
+    let mut ebo: GLuint = 0;
     unsafe {
         gl::GenVertexArrays(1, &mut vao);
         gl::GenBuffers(1, &mut vbo);
+        gl::GenBuffers(1, &mut ebo);
 
         gl::BindVertexArray(vao);
+
+        gl::BindBuffer(ELEMENT_ARRAY_BUFFER, ebo);
+        gl::BufferData(
+            ELEMENT_ARRAY_BUFFER,
+            mem::size_of_val(&indices) as _,
+            indices.as_ptr() as *const GLvoid,
+            STATIC_DRAW,
+        );
 
         gl::BindBuffer(ARRAY_BUFFER, vbo);
         gl::BufferData(
@@ -180,7 +202,8 @@ fn main() {
 
             gl::UseProgram(shader_program);
             gl::BindVertexArray(vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::DrawElements(TRIANGLES, 6, UNSIGNED_INT, std::ptr::null());
+            gl::BindVertexArray(0);
         };
 
         window.swap_buffers();

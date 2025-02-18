@@ -1,5 +1,5 @@
 use std::{
-    ffi::CString,
+    ffi::{c_void, CString},
     mem::{self, size_of},
 };
 
@@ -12,21 +12,29 @@ use glfw::{Action, Context};
 
 const VERTEX_SHADER_SOURCE: &str = r#"
 #version 330 core
+
 layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+
+out vec3 ourColor;
 
 void main()
 {
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    gl_Position = vec4(aPos, 1.0);
+    ourColor = aColor;
 }
 "#;
 
 const FRAGMENT_SHADER_SOURCE: &str = r#"
 #version 330 core
+
 out vec4 FragColor;
+in vec3 ourColor;
 
 void main()
 {
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+    FragColor = vec4(ourColor, 1.0f);
+    
 } 
 "#;
 
@@ -142,7 +150,13 @@ fn main() {
         gl::DeleteShader(fragment_shader);
     }
 
-    let vertices: [f32; 9] = [-0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.0, 0.5, 0.0];
+    #[rustfmt::skip]
+    let vertices: [f32; 18] = [
+        // positions        // colors
+        -0.5, -0.5, 0.0,    1.0, 0.0, 0.0,
+         0.5, -0.5, 0.0,    0.0, 1.0, 0.0,
+         0.0,  0.5, 0.0,    0.0, 0.0, 1.0
+    ];
 
     let mut vao: GLuint = 0;
     let mut vbo: GLuint = 0;
@@ -165,10 +179,19 @@ fn main() {
             3,
             gl::FLOAT,
             gl::FALSE,
-            3 * size_of::<f32>() as i32,
+            6 * size_of::<f32>() as i32,
             std::ptr::null(),
         );
         gl::EnableVertexAttribArray(0);
+        gl::VertexAttribPointer(
+            1,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            6 * size_of::<f32>() as i32,
+            (3 * size_of::<f32>()) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(1);
     };
 
     while !window.should_close() {

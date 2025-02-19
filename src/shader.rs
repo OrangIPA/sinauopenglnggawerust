@@ -21,7 +21,6 @@ impl Shader {
 
         let vertex: u32;
         let vertex_shader_source = CString::new(vertex_code.as_str()).unwrap();
-        // let a = vertex_shader_source.as_ptr();
         unsafe {
             vertex = gl::CreateShader(VERTEX_SHADER);
             gl::ShaderSource(

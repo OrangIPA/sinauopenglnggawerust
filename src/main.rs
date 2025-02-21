@@ -7,8 +7,8 @@ use std::{
 use gl::{
     types::{GLint, GLuint, GLvoid},
     ARRAY_BUFFER, COLOR_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR, MIRRORED_REPEAT, NEAREST,
-    STATIC_DRAW, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S,
-    TEXTURE_WRAP_T, UNSIGNED_BYTE, UNSIGNED_INT,
+    STATIC_DRAW, TEXTURE1, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER,
+    TEXTURE_WRAP_S, TEXTURE_WRAP_T, UNSIGNED_BYTE, UNSIGNED_INT,
 };
 use glfw::{Action, Context};
 use shader::Shader;
@@ -107,25 +107,19 @@ fn main() {
         gl::EnableVertexAttribArray(2);
     };
 
-    let mut texture: u32 = 0;
-    unsafe {
-        gl::GenTextures(1, &mut texture);
-        gl::BindTexture(TEXTURE_2D, texture);
-    }
-
     unsafe {
         gl::TexParameteri(TEXTURE_2D, TEXTURE_WRAP_S, MIRRORED_REPEAT as GLint);
         gl::TexParameteri(TEXTURE_2D, TEXTURE_WRAP_T, MIRRORED_REPEAT as GLint);
         gl::TexParameteri(TEXTURE_2D, TEXTURE_MIN_FILTER, NEAREST as GLint);
         gl::TexParameteri(TEXTURE_2D, TEXTURE_MAG_FILTER, LINEAR as GLint);
-    }
+    };
 
     let mut width: i32 = 0;
     let mut height: i32 = 0;
     let mut nr_channels: i32 = 0;
 
     let container_path = CString::new("assets/container.jpg").unwrap();
-    let data = unsafe {
+    let data_container = unsafe {
         stbi_load(
             container_path.as_ptr(),
             &mut width as *mut c_int,
@@ -135,8 +129,24 @@ fn main() {
         )
     };
 
-    if data != null_mut() {
-        unsafe {
+    let face_path = CString::new("assets/awesomeface.png").unwrap();
+    let data_face = unsafe {
+        stbi_load(
+            face_path.as_ptr(),
+            &mut width as *mut c_int,
+            &mut height as *mut c_int,
+            &mut nr_channels,
+            0,
+        )
+    };
+
+    let mut texture_container: u32 = 0;
+    let mut texture_face: u32 = 0;
+    unsafe {
+        gl::GenTextures(1, &mut texture_container);
+        gl::BindTexture(TEXTURE_2D, texture_container);
+
+        if data_container != null_mut() {
             gl::TexImage2D(
                 TEXTURE_2D,
                 0,
@@ -146,16 +156,37 @@ fn main() {
                 0,
                 gl::RGB,
                 UNSIGNED_BYTE,
-                data as *const c_void,
+                data_container as *const c_void,
             );
             gl::GenerateMipmap(TEXTURE_2D);
+        } else {
+            eprintln!("Failed to load container texture");
         }
-    } else {
-        eprintln!("Failed to load texture");
-    }
+
+        gl::ActiveTexture(TEXTURE1);
+        gl::GenTextures(1, &mut texture_face);
+        gl::BindTexture(TEXTURE_2D, texture_face);
+
+        if data_face != null_mut() {
+            gl::TexImage2D(
+                TEXTURE_2D,
+                0,
+                gl::RGB.try_into().unwrap(),
+                width,
+                height,
+                0,
+                gl::RGB,
+                UNSIGNED_BYTE,
+                data_face as *const c_void,
+            );
+        } else {
+            eprintln!("Failed to load face texture");
+        }
+    };
 
     unsafe {
-        stbi_image_free(data as *mut c_void);
+        stbi_image_free(data_face as *mut c_void);
+        stbi_image_free(data_container as *mut c_void);
     }
 
     while !window.should_close() {

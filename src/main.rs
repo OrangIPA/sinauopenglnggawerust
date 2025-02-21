@@ -36,12 +36,12 @@ fn main() {
         Shader::new("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl").unwrap();
 
     #[rustfmt::skip]
-    let vertices: [f32; 24] = [
-        // positions        // colors
-         0.5,  0.5, 0.0,    1.0, 0.0, 0.0,
-         0.5, -0.5, 0.0,    0.0, 1.0, 0.0,
-        -0.5, -0.5, 0.0,    0.0, 0.0, 1.0,
-        -0.5,  0.5, 0.0,    1.0, 1.0, 0.0
+    let vertices: [f32; 32] = [
+        // positions        // colors       // texture coords
+         0.5,  0.5, 0.0,    1.0, 0.0, 0.0,  1.0, 1.0,
+         0.5, -0.5, 0.0,    0.0, 1.0, 0.0,  1.0, 0.0,
+        -0.5, -0.5, 0.0,    0.0, 0.0, 1.0,  0.0, 0.0,
+        -0.5,  0.5, 0.0,    1.0, 1.0, 0.0,  0.0, 1.0
     ];
 
     #[rustfmt::skip]
@@ -81,19 +81,30 @@ fn main() {
             3,
             gl::FLOAT,
             gl::FALSE,
-            6 * size_of::<f32>() as i32,
+            8 * size_of::<f32>() as i32,
             std::ptr::null(),
         );
         gl::EnableVertexAttribArray(0);
+
         gl::VertexAttribPointer(
             1,
             3,
             gl::FLOAT,
             gl::FALSE,
-            6 * size_of::<f32>() as i32,
+            8 * size_of::<f32>() as i32,
             (3 * size_of::<f32>()) as *const c_void,
         );
         gl::EnableVertexAttribArray(1);
+
+        gl::VertexAttribPointer(
+            2,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            8 * size_of::<f32>() as i32,
+            (6 * size_of::<f32>()) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(2);
     };
 
     let mut texture: u32 = 0;

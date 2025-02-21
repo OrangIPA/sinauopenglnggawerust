@@ -7,12 +7,12 @@ use std::{
 use gl::{
     types::{GLint, GLuint, GLvoid},
     ARRAY_BUFFER, COLOR_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR, MIRRORED_REPEAT, NEAREST,
-    STATIC_DRAW, TEXTURE1, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER,
-    TEXTURE_WRAP_S, TEXTURE_WRAP_T, UNSIGNED_BYTE, UNSIGNED_INT,
+    STATIC_DRAW, TEXTURE1, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S,
+    TEXTURE_WRAP_T, UNSIGNED_BYTE, UNSIGNED_INT,
 };
 use glfw::{Action, Context};
 use shader::Shader;
-use stb_image::stb_image::{stbi_image_free, stbi_load};
+use stb_image::stb_image::{stbi_image_free, stbi_load, stbi_set_flip_vertically_on_load};
 
 mod shader;
 
@@ -114,28 +114,29 @@ fn main() {
         gl::TexParameteri(TEXTURE_2D, TEXTURE_MAG_FILTER, LINEAR as GLint);
     };
 
-    let mut width: i32 = 0;
-    let mut height: i32 = 0;
-    let mut nr_channels: i32 = 0;
+    let (mut width_container, mut height_container, mut nr_channels_container): (i32, i32, i32) =
+        (0, 0, 0);
+    let (mut width_face, mut height_face, mut nr_channels_face): (i32, i32, i32) = (0, 0, 0);
 
     let container_path = CString::new("assets/container.jpg").unwrap();
     let data_container = unsafe {
         stbi_load(
             container_path.as_ptr(),
-            &mut width as *mut c_int,
-            &mut height as *mut c_int,
-            &mut nr_channels,
+            &mut width_container as *mut c_int,
+            &mut height_container as *mut c_int,
+            &mut nr_channels_container,
             0,
         )
     };
 
     let face_path = CString::new("assets/awesomeface.png").unwrap();
     let data_face = unsafe {
+        stbi_set_flip_vertically_on_load(1);
         stbi_load(
             face_path.as_ptr(),
-            &mut width as *mut c_int,
-            &mut height as *mut c_int,
-            &mut nr_channels,
+            &mut width_face as *mut c_int,
+            &mut height_face as *mut c_int,
+            &mut nr_channels_face,
             0,
         )
     };
@@ -151,8 +152,8 @@ fn main() {
                 TEXTURE_2D,
                 0,
                 gl::RGB.try_into().unwrap(),
-                width,
-                height,
+                width_container,
+                height_container,
                 0,
                 gl::RGB,
                 UNSIGNED_BYTE,
@@ -172,13 +173,14 @@ fn main() {
                 TEXTURE_2D,
                 0,
                 gl::RGB.try_into().unwrap(),
-                width,
-                height,
+                width_face,
+                height_face,
                 0,
-                gl::RGB,
+                gl::RGBA,
                 UNSIGNED_BYTE,
                 data_face as *const c_void,
             );
+            gl::GenerateMipmap(TEXTURE_2D);
         } else {
             eprintln!("Failed to load face texture");
         }
@@ -188,6 +190,10 @@ fn main() {
         stbi_image_free(data_face as *mut c_void);
         stbi_image_free(data_container as *mut c_void);
     }
+
+    our_shader.use_shader();
+    our_shader.set_int("texture1", 0);
+    our_shader.set_int("texture2", 1);
 
     while !window.should_close() {
         process_input(&mut window);

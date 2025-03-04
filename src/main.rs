@@ -6,7 +6,7 @@ use std::{
 
 use gl::{
     types::{GLint, GLuint, GLvoid},
-    ARRAY_BUFFER, COLOR_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, FALSE, LINEAR, MIRRORED_REPEAT, NEAREST,
+    ARRAY_BUFFER, COLOR_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR, MIRRORED_REPEAT, NEAREST,
     STATIC_DRAW, TEXTURE1, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S,
     TEXTURE_WRAP_T, UNSIGNED_BYTE, UNSIGNED_INT,
 };
@@ -16,12 +16,6 @@ use shader::Shader;
 use stb_image::stb_image::{stbi_image_free, stbi_load, stbi_set_flip_vertically_on_load};
 
 mod shader;
-
-macro_rules! c_str {
-    ($s:expr) => {
-        concat!($s, "\0").as_ptr() as *const c_void
-    };
-}
 
 fn main() {
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
@@ -202,10 +196,9 @@ fn main() {
     our_shader.set_int("texture1", 0);
     our_shader.set_int("texture2", 1);
 
-    
     while !window.should_close() {
         process_input(&mut window);
-        
+
         let mut trans = glm::identity::<f32, 4>();
         trans = glm::translate(&trans, &glm::vec3(0.5, -0.5, 0.));
         trans = glm::rotate(&trans, glfw.get_time() as f32, &glm::vec3(0., 0., 1.));

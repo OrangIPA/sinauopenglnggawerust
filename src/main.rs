@@ -27,7 +27,7 @@ fn main() {
         .create_window(800, 600, "LearnOpenGL", glfw::WindowMode::Windowed)
         .unwrap();
 
-    gl::load_with(|s| window.get_proc_address(s) as *const std::os::raw::c_void);
+    gl::load_with(|s| window.get_proc_address(s));
 
     window.make_current();
     window.set_framebuffer_size_polling(true);

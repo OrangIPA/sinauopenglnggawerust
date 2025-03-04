@@ -2,13 +2,14 @@ use std::{ffi::CString, fs, str::FromStr};
 
 use gl::{
     types::{GLchar, GLint},
-    COMPILE_STATUS, FRAGMENT_SHADER, INFO_LOG_LENGTH, LINK_STATUS, VERTEX_SHADER,
+    COMPILE_STATUS, FALSE, FRAGMENT_SHADER, INFO_LOG_LENGTH, LINK_STATUS, VERTEX_SHADER,
 };
 
 pub struct Shader {
-    id: u32,
+    pub id: u32,
 }
 
+#[allow(dead_code)]
 impl Shader {
     pub fn new(vertex_path: &str, fragment_path: &str) -> Result<Self, ()> {
         let vertex_code = fs::read_to_string(vertex_path).unwrap_or(String::from(""));
@@ -23,12 +24,7 @@ impl Shader {
         let vertex_shader_source = CString::new(vertex_code.as_str()).unwrap();
         unsafe {
             vertex = gl::CreateShader(VERTEX_SHADER);
-            gl::ShaderSource(
-                vertex,
-                1,
-                &vertex_shader_source.as_ptr(),
-                std::ptr::null(),
-            );
+            gl::ShaderSource(vertex, 1, &vertex_shader_source.as_ptr(), std::ptr::null());
             gl::CompileShader(vertex);
 
             let mut success = gl::FALSE as GLint;
@@ -148,6 +144,17 @@ impl Shader {
                 gl::GetUniformLocation(self.id, CString::from_str(name).unwrap().as_ptr()),
                 value,
             )
+        }
+    }
+
+    pub fn set_mat4(&self, name: &str, value: &nalgebra_glm::Mat4) {
+        unsafe {
+            gl::UniformMatrix4fv(
+                gl::GetUniformLocation(self.id, CString::from_str(name).unwrap().as_ptr()),
+                1,
+                FALSE,
+                nalgebra_glm::value_ptr(value).as_ptr(),
+            );
         }
     }
 }

@@ -1,14 +1,14 @@
 use std::{
-    ffi::{c_int, c_void, CString},
+    ffi::{CString, c_int, c_void},
     mem::{self, size_of},
     ptr::{null, null_mut},
 };
 
 use gl::{
-    types::{GLint, GLuint, GLvoid},
     ARRAY_BUFFER, COLOR_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR, MIRRORED_REPEAT, NEAREST,
-    STATIC_DRAW, TEXTURE1, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S,
-    TEXTURE_WRAP_T, UNSIGNED_BYTE, UNSIGNED_INT,
+    STATIC_DRAW, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S,
+    TEXTURE_WRAP_T, TEXTURE1, UNSIGNED_BYTE, UNSIGNED_INT,
+    types::{GLint, GLuint, GLvoid},
 };
 use glfw::{Action, Context};
 use nalgebra_glm as glm;
@@ -196,6 +196,18 @@ fn main() {
     our_shader.set_int("texture1", 0);
     our_shader.set_int("texture2", 1);
 
+    let model = glm::rotate(
+        &glm::identity::<f32, 4>(),
+        f32::to_radians(-55.),
+        &glm::vec3(1., 0., 0.),
+    );
+    let view = glm::translate(&glm::identity::<f32, 4>(), &glm::vec3(0., 0., -3.));
+    let projection = glm::perspective(f32::to_radians(45.), 800. / 600., 0.1, 100.);
+
+    our_shader.set_mat4("model", &model);
+    our_shader.set_mat4("view", &view);
+    our_shader.set_mat4("projection", &projection);
+
     while !window.should_close() {
         process_input(&mut window);
 
@@ -210,7 +222,7 @@ fn main() {
 
             // let transform_loc = gl::GetUniformLocation(our_shader.id, c_str!("transform") as _);
             // gl::UniformMatrix4fv(transform_loc, 1, FALSE, glm::value_ptr(&trans).as_ptr());
-            our_shader.set_mat4("transform", &trans);
+            // our_shader.set_mat4("transform", &trans);
 
             our_shader.use_shader();
             gl::BindVertexArray(vao);

@@ -231,7 +231,7 @@ fn main() {
 
     unsafe { gl::Enable(gl::DEPTH_TEST) };
 
-    let cubePositions = vec![
+    let cube_positions = vec![
         glm::vec3(0.0, 0.0, 0.0),
         glm::vec3(2.0, 5.0, -15.0),
         glm::vec3(-1.5, -2.2, -2.5),
@@ -252,7 +252,7 @@ fn main() {
 
             our_shader.use_shader();
             gl::BindVertexArray(vao);
-            for (i, cube) in cubePositions.iter().enumerate() {
+            for (i, cube) in cube_positions.iter().enumerate() {
                 let mut model = glm::identity::<f32, 4>();
                 model = glm::translate(&model, cube);
                 let angle = 20. * i as f32;

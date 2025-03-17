@@ -5,7 +5,10 @@ use std::{
 };
 
 use gl::{
-    types::{GLint, GLuint, GLvoid}, ARRAY_BUFFER, COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR, MIRRORED_REPEAT, NEAREST, STATIC_DRAW, TEXTURE1, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S, TEXTURE_WRAP_T, UNSIGNED_BYTE
+    ARRAY_BUFFER, COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR,
+    MIRRORED_REPEAT, NEAREST, STATIC_DRAW, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER,
+    TEXTURE_WRAP_S, TEXTURE_WRAP_T, TEXTURE1, UNSIGNED_BYTE,
+    types::{GLint, GLuint, GLvoid},
 };
 use glfw::{Action, Context};
 use nalgebra_glm as glm;
@@ -220,33 +223,44 @@ fn main() {
     our_shader.set_int("texture1", 0);
     our_shader.set_int("texture2", 1);
 
-    let model = glm::rotate(
-        &glm::identity::<f32, 4>(),
-        f32::to_radians(0.),
-        &glm::vec3(1., 0., 0.),
-    );
     let view = glm::translate(&glm::identity::<f32, 4>(), &glm::vec3(0., 0., -3.));
     let projection = glm::perspective(800. / 600., f32::to_radians(45.), 0.1, 100.);
 
-    our_shader.set_mat4("model", &model);
     our_shader.set_mat4("view", &view);
     our_shader.set_mat4("projection", &projection);
 
     unsafe { gl::Enable(gl::DEPTH_TEST) };
 
+    let cubePositions = vec![
+        glm::vec3(0.0, 0.0, 0.0),
+        glm::vec3(2.0, 5.0, -15.0),
+        glm::vec3(-1.5, -2.2, -2.5),
+        glm::vec3(-3.8, -2.0, -12.3),
+        glm::vec3(2.4, -0.4, -3.5),
+        glm::vec3(-1.7, 3.0, -7.5),
+        glm::vec3(1.3, -2.0, -2.5),
+        glm::vec3(1.5, 2.0, -2.5),
+        glm::vec3(1.5, 0.2, -1.5),
+        glm::vec3(-1.3, 1.0, -1.5),
+    ];
+
     while !window.should_close() {
         process_input(&mut window);
-
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
 
-            let model = glm::rotate(&model, glfw.get_time() as f32 * f32::to_radians(50.), &glm::vec3(0.5, 1.0, 0.0));
-            our_shader.set_mat4("model", &model);
-
             our_shader.use_shader();
             gl::BindVertexArray(vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, 36);
+            for (i, cube) in cubePositions.iter().enumerate() {
+                let mut model = glm::identity::<f32, 4>();
+                model = glm::translate(&model, cube);
+                let angle = 20. * i as f32;
+                model = glm::rotate(&model, f32::to_radians(angle), &glm::vec3(1.0, 0.3, 0.5));
+                our_shader.set_mat4("model", &model);
+
+                gl::DrawArrays(gl::TRIANGLES, 0, 36);
+            }
             gl::BindVertexArray(0);
         };
 

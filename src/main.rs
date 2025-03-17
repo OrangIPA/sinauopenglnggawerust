@@ -1,14 +1,11 @@
 use std::{
     ffi::{CString, c_int, c_void},
     mem::{self, size_of},
-    ptr::{null, null_mut},
+    ptr::null_mut,
 };
 
 use gl::{
-    ARRAY_BUFFER, COLOR_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR, MIRRORED_REPEAT, NEAREST,
-    STATIC_DRAW, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S,
-    TEXTURE_WRAP_T, TEXTURE1, UNSIGNED_BYTE, UNSIGNED_INT,
-    types::{GLint, GLuint, GLvoid},
+    types::{GLint, GLuint, GLvoid}, ARRAY_BUFFER, COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR, MIRRORED_REPEAT, NEAREST, STATIC_DRAW, TEXTURE1, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S, TEXTURE_WRAP_T, UNSIGNED_BYTE
 };
 use glfw::{Action, Context};
 use nalgebra_glm as glm;
@@ -37,12 +34,49 @@ fn main() {
         Shader::new("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl").unwrap();
 
     #[rustfmt::skip]
-    let vertices: [f32; 32] = [
-        // positions        // colors       // texture coords
-         0.5,  0.5, 0.0,    1.0, 0.0, 0.0,  1.0, 1.0,
-         0.5, -0.5, 0.0,    0.0, 1.0, 0.0,  1.0, 0.0,
-        -0.5, -0.5, 0.0,    0.0, 0.0, 1.0,  0.0, 0.0,
-        -0.5,  0.5, 0.0,    1.0, 1.0, 0.0,  0.0, 1.0
+    let vertices: [f32; 36 * 5] = [
+        // positions      // texture coords
+       -0.5, -0.5, -0.5,  0.0, 0.0,
+        0.5, -0.5, -0.5,  1.0, 0.0,
+        0.5,  0.5, -0.5,  1.0, 1.0,
+        0.5,  0.5, -0.5,  1.0, 1.0,
+       -0.5,  0.5, -0.5,  0.0, 1.0,
+       -0.5, -0.5, -0.5,  0.0, 0.0,
+   
+       -0.5, -0.5,  0.5,  0.0, 0.0,
+        0.5, -0.5,  0.5,  1.0, 0.0,
+        0.5,  0.5,  0.5,  1.0, 1.0,
+        0.5,  0.5,  0.5,  1.0, 1.0,
+       -0.5,  0.5,  0.5,  0.0, 1.0,
+       -0.5, -0.5,  0.5,  0.0, 0.0,
+   
+       -0.5,  0.5,  0.5,  1.0, 0.0,
+       -0.5,  0.5, -0.5,  1.0, 1.0,
+       -0.5, -0.5, -0.5,  0.0, 1.0,
+       -0.5, -0.5, -0.5,  0.0, 1.0,
+       -0.5, -0.5,  0.5,  0.0, 0.0,
+       -0.5,  0.5,  0.5,  1.0, 0.0,
+   
+        0.5,  0.5,  0.5,  1.0, 0.0,
+        0.5,  0.5, -0.5,  1.0, 1.0,
+        0.5, -0.5, -0.5,  0.0, 1.0,
+        0.5, -0.5, -0.5,  0.0, 1.0,
+        0.5, -0.5,  0.5,  0.0, 0.0,
+        0.5,  0.5,  0.5,  1.0, 0.0,
+   
+       -0.5, -0.5, -0.5,  0.0, 1.0,
+        0.5, -0.5, -0.5,  1.0, 1.0,
+        0.5, -0.5,  0.5,  1.0, 0.0,
+        0.5, -0.5,  0.5,  1.0, 0.0,
+       -0.5, -0.5,  0.5,  0.0, 0.0,
+       -0.5, -0.5, -0.5,  0.0, 1.0,
+   
+       -0.5,  0.5, -0.5,  0.0, 1.0,
+        0.5,  0.5, -0.5,  1.0, 1.0,
+        0.5,  0.5,  0.5,  1.0, 0.0,
+        0.5,  0.5,  0.5,  1.0, 0.0,
+       -0.5,  0.5,  0.5,  0.0, 0.0,
+       -0.5,  0.5, -0.5,  0.0, 1.0
     ];
 
     #[rustfmt::skip]
@@ -82,30 +116,20 @@ fn main() {
             3,
             gl::FLOAT,
             gl::FALSE,
-            8 * size_of::<f32>() as i32,
+            5 * size_of::<f32>() as i32,
             std::ptr::null(),
         );
         gl::EnableVertexAttribArray(0);
 
         gl::VertexAttribPointer(
             1,
-            3,
+            2,
             gl::FLOAT,
             gl::FALSE,
-            8 * size_of::<f32>() as i32,
+            5 * size_of::<f32>() as i32,
             (3 * size_of::<f32>()) as *const c_void,
         );
         gl::EnableVertexAttribArray(1);
-
-        gl::VertexAttribPointer(
-            2,
-            2,
-            gl::FLOAT,
-            gl::FALSE,
-            8 * size_of::<f32>() as i32,
-            (6 * size_of::<f32>()) as *const c_void,
-        );
-        gl::EnableVertexAttribArray(2);
     };
 
     unsafe {
@@ -198,7 +222,7 @@ fn main() {
 
     let model = glm::rotate(
         &glm::identity::<f32, 4>(),
-        f32::to_radians(-55.),
+        f32::to_radians(0.),
         &glm::vec3(1., 0., 0.),
     );
     let view = glm::translate(&glm::identity::<f32, 4>(), &glm::vec3(0., 0., -3.));
@@ -208,25 +232,21 @@ fn main() {
     our_shader.set_mat4("view", &view);
     our_shader.set_mat4("projection", &projection);
 
+    unsafe { gl::Enable(gl::DEPTH_TEST) };
+
     while !window.should_close() {
         process_input(&mut window);
 
-        let mut trans = glm::identity::<f32, 4>();
-        trans = glm::translate(&trans, &glm::vec3(0.5, -0.5, 0.));
-        trans = glm::rotate(&trans, glfw.get_time() as f32, &glm::vec3(0., 0., 1.));
-        println!("{trans}");
-
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-            gl::Clear(COLOR_BUFFER_BIT);
+            gl::Clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
 
-            // let transform_loc = gl::GetUniformLocation(our_shader.id, c_str!("transform") as _);
-            // gl::UniformMatrix4fv(transform_loc, 1, FALSE, glm::value_ptr(&trans).as_ptr());
-            // our_shader.set_mat4("transform", &trans);
+            let model = glm::rotate(&model, glfw.get_time() as f32 * f32::to_radians(50.), &glm::vec3(0.5, 1.0, 0.0));
+            our_shader.set_mat4("model", &model);
 
             our_shader.use_shader();
             gl::BindVertexArray(vao);
-            gl::DrawElements(gl::TRIANGLES, 6, UNSIGNED_INT, null());
+            gl::DrawArrays(gl::TRIANGLES, 0, 36);
             gl::BindVertexArray(0);
         };
 

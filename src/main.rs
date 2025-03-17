@@ -226,7 +226,7 @@ fn main() {
         &glm::vec3(1., 0., 0.),
     );
     let view = glm::translate(&glm::identity::<f32, 4>(), &glm::vec3(0., 0., -3.));
-    let projection = glm::perspective(f32::to_radians(45.), 800. / 600., 0.1, 100.);
+    let projection = glm::perspective(800. / 600., f32::to_radians(45.), 0.1, 100.);
 
     our_shader.set_mat4("model", &model);
     our_shader.set_mat4("view", &view);

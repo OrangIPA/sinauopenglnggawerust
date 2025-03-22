@@ -10,7 +10,7 @@ use gl::{
     TEXTURE_WRAP_S, TEXTURE_WRAP_T, TEXTURE1, UNSIGNED_BYTE,
     types::{GLint, GLuint, GLvoid},
 };
-use glfw::{Action, Context};
+use glfw::{Action, Context, Key};
 use nalgebra_glm as glm;
 use shader::Shader;
 use stb_image::stb_image::{stbi_image_free, stbi_load, stbi_set_flip_vertically_on_load};
@@ -223,12 +223,6 @@ fn main() {
     our_shader.set_int("texture1", 0);
     our_shader.set_int("texture2", 1);
 
-    let view = glm::translate(&glm::identity::<f32, 4>(), &glm::vec3(0., 0., -3.));
-    let projection = glm::perspective(800. / 600., f32::to_radians(45.), 0.1, 100.);
-
-    our_shader.set_mat4("view", &view);
-    our_shader.set_mat4("projection", &projection);
-
     unsafe { gl::Enable(gl::DEPTH_TEST) };
 
     let cube_positions = vec![
@@ -244,18 +238,37 @@ fn main() {
         glm::vec3(-1.3, 1.0, -1.5),
     ];
 
+    let mut camera = CameraState{
+        pos: glm::vec3(0.0, 0.0, 3.0),
+        front: glm::vec3(0.0, 0.0, -1.0), 
+        up: glm::vec3(0.0, 1.0, 0.0),
+    };
+    let mut last_time = 0 as f32;
+
     while !window.should_close() {
-        process_input(&mut window);
+        let current_time = glfw.get_time() as f32;
+        let delta = current_time - last_time;
+        last_time = current_time;
+        process_input(&mut window, &mut camera, delta);
+
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
 
+            let view = glm::look_at(
+                &camera.pos, &(camera.pos + camera.front), &camera.up
+            );
+            our_shader.set_mat4("view", &view);
+
+            let projection = glm::perspective(800. / 600., f32::to_radians(45.), 0.1, 100.);
+            our_shader.set_mat4("projection", &projection);
+
             our_shader.use_shader();
             gl::BindVertexArray(vao);
             for (i, cube) in cube_positions.iter().enumerate() {
+                let angle = 20. * i as f32;
                 let mut model = glm::identity::<f32, 4>();
                 model = glm::translate(&model, cube);
-                let angle = 20. * i as f32;
                 model = glm::rotate(&model, f32::to_radians(angle), &glm::vec3(1.0, 0.3, 0.5));
                 our_shader.set_mat4("model", &model);
 
@@ -269,8 +282,28 @@ fn main() {
     }
 }
 
-fn process_input(window: &mut glfw::Window) {
-    if window.get_key(glfw::Key::Escape) == Action::Press {
+fn process_input(window: &mut glfw::Window, cam: &mut CameraState, delta: f32) {
+    if window.get_key(Key::Escape) == Action::Press {
         window.set_should_close(true);
     }
+
+    let camera_speed = 5. * delta;
+    if window.get_key(Key::W) == Action::Press {
+        cam.pos += camera_speed * cam.front;
+    }
+    if window.get_key(Key::S) == Action::Press {
+        cam.pos -= camera_speed * cam.front;
+    }
+    if window.get_key(Key::A) == Action::Press {
+        cam.pos -= glm::normalize(&(glm::cross(&cam.front, &cam.up))) * camera_speed;
+    }
+    if window.get_key(Key::D) == Action::Press {
+        cam.pos += glm::normalize(&(glm::cross(&cam.front, &cam.up))) * camera_speed;
+    }
+}
+
+struct CameraState {
+    pub pos: glm::Vec3,
+    pub front: glm::Vec3,
+    pub up: glm::Vec3,
 }

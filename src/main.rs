@@ -238,10 +238,12 @@ fn main() {
         glm::vec3(-1.3, 1.0, -1.5),
     ];
 
-    let mut camera = CameraState{
+    let mut camera = CameraState {
         pos: glm::vec3(0.0, 0.0, 3.0),
-        front: glm::vec3(0.0, 0.0, -1.0), 
+        front: glm::vec3(0.0, 0.0, -1.0),
         up: glm::vec3(0.0, 1.0, 0.0),
+
+        ..Default::default()
     };
     let mut last_time = 0 as f32;
 
@@ -255,9 +257,7 @@ fn main() {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
 
-            let view = glm::look_at(
-                &camera.pos, &(camera.pos + camera.front), &camera.up
-            );
+            let view = glm::look_at(&camera.pos, &(camera.pos + camera.front), &camera.up);
             our_shader.set_mat4("view", &view);
 
             let projection = glm::perspective(800. / 600., f32::to_radians(45.), 0.1, 100.);
@@ -287,13 +287,10 @@ fn process_input(window: &mut glfw::Window, cam: &mut CameraState, delta: f32) {
         window.set_should_close(true);
     }
 
-    let yaw = -90f32;
-    let pitch = 0f32;
-
     let mut direction = glm::Vec3::zeros();
-    direction.x = f32::cos(yaw.to_radians()) * f32::cos(pitch.to_radians());
-    direction.y = f32::sin(pitch.to_radians());
-    direction.z = f32::sin(yaw.to_radians()) * f32::cos(pitch.to_radians());
+    direction.x = f32::cos(cam.yaw.to_radians()) * f32::cos(cam.pitch.to_radians());
+    direction.y = f32::sin(cam.pitch.to_radians());
+    direction.z = f32::sin(cam.yaw.to_radians()) * f32::cos(cam.pitch.to_radians());
 
     let camera_speed = 5. * delta;
     if window.get_key(Key::W) == Action::Press {
@@ -310,8 +307,12 @@ fn process_input(window: &mut glfw::Window, cam: &mut CameraState, delta: f32) {
     }
 }
 
+#[derive(Default)]
 struct CameraState {
     pub pos: glm::Vec3,
     pub front: glm::Vec3,
     pub up: glm::Vec3,
+
+    pub yaw: f32,
+    pub pitch: f32,
 }

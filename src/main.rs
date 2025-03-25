@@ -287,6 +287,14 @@ fn process_input(window: &mut glfw::Window, cam: &mut CameraState, delta: f32) {
         window.set_should_close(true);
     }
 
+    let yaw = -90f32;
+    let pitch = 0f32;
+
+    let mut direction = glm::Vec3::zeros();
+    direction.x = f32::cos(yaw.to_radians()) * f32::cos(pitch.to_radians());
+    direction.y = f32::sin(pitch.to_radians());
+    direction.z = f32::sin(yaw.to_radians()) * f32::cos(pitch.to_radians());
+
     let camera_speed = 5. * delta;
     if window.get_key(Key::W) == Action::Press {
         cam.pos += camera_speed * cam.front;

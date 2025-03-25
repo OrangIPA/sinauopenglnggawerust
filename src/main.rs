@@ -1,7 +1,5 @@
 use std::{
-    ffi::{CString, c_int, c_void},
-    mem::{self, size_of},
-    ptr::null_mut,
+    cell::Cell, ffi::{c_int, c_void, CString}, mem::{self, size_of}, ptr::null_mut, rc::Rc
 };
 
 use gl::{
@@ -238,26 +236,65 @@ fn main() {
         glm::vec3(-1.3, 1.0, -1.5),
     ];
 
-    let mut camera = CameraState {
-        pos: glm::vec3(0.0, 0.0, 3.0),
-        front: glm::vec3(0.0, 0.0, -1.0),
-        up: glm::vec3(0.0, 1.0, 0.0),
+    let camera = Rc::new(CameraState {
+        pos: Cell::new(glm::vec3(0.0, 0.0, 3.0)),
+        front: Cell::new(glm::vec3(0.0, 0.0, -1.0)),
+        up: Cell::new(glm::vec3(0.0, 1.0, 0.0)),
 
-        ..Default::default()
-    };
+        yaw: Cell::new(-90.0),
+        pitch: Cell::new(0.0),
+    });
     let mut last_time = 0 as f32;
+
+    window.set_cursor_mode(glfw::CursorMode::Disabled);
+
+    let mut last_x = 400f32;
+    let mut last_y = 300f32;
+    let mut first_mouse = true;
+    let camera_clone = camera.clone();
+    window.set_cursor_pos_callback(move |_, x, y| {
+        if first_mouse {
+            last_x = x as f32;
+            last_y = y as f32;
+
+            first_mouse = false;
+        }
+
+        let mut x_offset = x as f32 - last_x;
+        let mut y_offset = last_y - y as f32;
+        last_x = x as f32;
+        last_y = y as f32;
+
+        const SENSITIVITY: f32 = 0.1;
+        x_offset *= SENSITIVITY;
+        y_offset *= SENSITIVITY;
+
+        camera_clone.yaw.set(camera_clone.yaw.get() + x_offset);
+        camera_clone.pitch.set(camera_clone.pitch.get() + y_offset);
+
+        camera_clone.pitch.set(camera_clone.pitch.get().clamp(-89.0, 89.0));
+
+        let mut direction = glm::Vec3::zeros();
+        direction.x = f32::cos(camera_clone.yaw.get().to_radians()) * f32::cos(camera_clone.pitch.get().to_radians());
+        direction.y = f32::sin(camera_clone.pitch.get().to_radians());
+        direction.z = f32::sin(camera_clone.yaw.get().to_radians()) * f32::cos(camera_clone.pitch.get().to_radians());
+        
+        camera_clone.front.set(glm::normalize(&direction));
+
+        // dbg!(&camera.yaw, &camera.pitch);
+    });
 
     while !window.should_close() {
         let current_time = glfw.get_time() as f32;
         let delta = current_time - last_time;
         last_time = current_time;
-        process_input(&mut window, &mut camera, delta);
+        process_input(&mut window, &camera, delta);
 
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
 
-            let view = glm::look_at(&camera.pos, &(camera.pos + camera.front), &camera.up);
+            let view = glm::look_at(&camera.pos.get(), &(camera.pos.get() + camera.front.get()), &camera.up.get());
             our_shader.set_mat4("view", &view);
 
             let projection = glm::perspective(800. / 600., f32::to_radians(45.), 0.1, 100.);
@@ -282,37 +319,31 @@ fn main() {
     }
 }
 
-fn process_input(window: &mut glfw::Window, cam: &mut CameraState, delta: f32) {
+fn process_input(window: &mut glfw::Window, cam: &CameraState, delta: f32) {
     if window.get_key(Key::Escape) == Action::Press {
         window.set_should_close(true);
     }
 
-    let mut direction = glm::Vec3::zeros();
-    direction.x = f32::cos(cam.yaw.to_radians()) * f32::cos(cam.pitch.to_radians());
-    direction.y = f32::sin(cam.pitch.to_radians());
-    direction.z = f32::sin(cam.yaw.to_radians()) * f32::cos(cam.pitch.to_radians());
-
     let camera_speed = 5. * delta;
     if window.get_key(Key::W) == Action::Press {
-        cam.pos += camera_speed * cam.front;
+        cam.pos.set(cam.pos.get() + camera_speed * cam.front.get());
     }
     if window.get_key(Key::S) == Action::Press {
-        cam.pos -= camera_speed * cam.front;
+        cam.pos.set(-cam.pos.get() + camera_speed * cam.front.get());
     }
     if window.get_key(Key::A) == Action::Press {
-        cam.pos -= glm::normalize(&(glm::cross(&cam.front, &cam.up))) * camera_speed;
+        cam.pos.set(-cam.pos.get() + glm::normalize(&(glm::cross(&cam.front.get(), &cam.up.get()))) * camera_speed);
     }
     if window.get_key(Key::D) == Action::Press {
-        cam.pos += glm::normalize(&(glm::cross(&cam.front, &cam.up))) * camera_speed;
+        cam.pos.set(cam.pos.get() + glm::normalize(&(glm::cross(&cam.front.get(), &cam.up.get()))) * camera_speed);
     }
 }
 
-#[derive(Default)]
 struct CameraState {
-    pub pos: glm::Vec3,
-    pub front: glm::Vec3,
-    pub up: glm::Vec3,
+    pub pos: Cell<glm::Vec3>,
+    pub front: Cell<glm::Vec3>,
+    pub up: Cell<glm::Vec3>,
 
-    pub yaw: f32,
-    pub pitch: f32,
+    pub yaw: Cell<f32>,
+    pub pitch: Cell<f32>,
 }

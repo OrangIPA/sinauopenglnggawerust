@@ -1,5 +1,5 @@
 use std::{
-    cell::{Cell, RefCell},
+    cell::RefCell,
     ffi::{CString, c_int, c_void},
     mem::{self, size_of},
     ptr::null_mut,
@@ -278,7 +278,6 @@ fn main() {
         cam.pitch += y_offset;
 
         cam.pitch = cam.pitch.clamp(-89.0, 90.0);
-        // .set(camera_clone.pitch.get().clamp(-89.0, 89.0));
 
         let mut direction = glm::Vec3::zeros();
         direction.x = f32::cos(cam.yaw.to_radians()) * f32::cos(cam.pitch.to_radians());
@@ -343,7 +342,7 @@ fn process_input(window: &mut glfw::Window, cam: &mut CameraState, delta: f32) {
         cam.pos -= glm::normalize(&(glm::cross(&cam.front, &cam.up))) * camera_speed;
     }
     if window.get_key(Key::D) == Action::Press {
-        cam.pos -= glm::normalize(&(glm::cross(&cam.front, &cam.up))) * camera_speed;
+        cam.pos += glm::normalize(&(glm::cross(&cam.front, &cam.up))) * camera_speed;
     }
 }
 

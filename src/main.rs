@@ -244,13 +244,12 @@ fn main() {
     let mut last_time = 0 as f32;
 
     window.set_cursor_mode(glfw::CursorMode::Disabled);
-
     let mut last_x = 400f32;
     let mut last_y = 300f32;
     let mut first_mouse = true;
-    let camera_clone = camera.clone();
+    let camera_mouse_clone = camera.clone();
     window.set_cursor_pos_callback(move |_, x, y| {
-        let mut cam = camera_clone.borrow_mut();
+        let mut cam = camera_mouse_clone.borrow_mut();
 
         if first_mouse {
             last_x = x as f32;
@@ -267,6 +266,12 @@ fn main() {
         cam.process_mouse_movement(x_offset, y_offset, None);
     });
 
+    window.set_scroll_polling(true);
+    let camera_scroll_clone = camera.clone();
+    window.set_scroll_callback(move |_, _x, y| {
+        camera_scroll_clone.borrow_mut().process_mouse_scroll(y as f32);
+    });
+
     while !window.should_close() {
         let current_time = glfw.get_time() as f32;
         let delta = current_time - last_time;
@@ -280,7 +285,7 @@ fn main() {
             let view = &camera.borrow().get_view_matrix();
             our_shader.set_mat4("view", view);
 
-            let projection = glm::perspective(800. / 600., f32::to_radians(45.), 0.1, 100.);
+            let projection = glm::perspective(800. / 600., f32::to_radians(camera.borrow().zoom), 0.1, 100.);
             our_shader.set_mat4("projection", &projection);
 
             our_shader.use_shader();

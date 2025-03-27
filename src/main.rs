@@ -6,18 +6,17 @@ use std::{
     rc::Rc,
 };
 
+use camera::CameraMovement;
 use gl::{
-    ARRAY_BUFFER, COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR,
-    MIRRORED_REPEAT, NEAREST, STATIC_DRAW, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER,
-    TEXTURE_WRAP_S, TEXTURE_WRAP_T, TEXTURE1, UNSIGNED_BYTE,
-    types::{GLint, GLuint, GLvoid},
+    types::{GLint, GLuint, GLvoid}, ARRAY_BUFFER, COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT, ELEMENT_ARRAY_BUFFER, LINEAR, MIRRORED_REPEAT, NEAREST, STATIC_DRAW, TEXTURE0, TEXTURE1, TEXTURE_2D, TEXTURE_MAG_FILTER, TEXTURE_MIN_FILTER, TEXTURE_WRAP_S, TEXTURE_WRAP_T, UNSIGNED_BYTE
 };
 use glfw::{Action, Context, Key};
-use nalgebra_glm as glm;
+use nalgebra_glm::{self as glm, vec3};
 use shader::Shader;
 use stb_image::stb_image::{stbi_image_free, stbi_load, stbi_set_flip_vertically_on_load};
 
 mod shader;
+mod camera;
 
 fn main() {
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
@@ -174,6 +173,7 @@ fn main() {
     let mut texture_container: u32 = 0;
     let mut texture_face: u32 = 0;
     unsafe {
+        gl::ActiveTexture(TEXTURE0);
         gl::GenTextures(1, &mut texture_container);
         gl::BindTexture(TEXTURE_2D, texture_container);
 
@@ -240,14 +240,7 @@ fn main() {
         glm::vec3(-1.3, 1.0, -1.5),
     ];
 
-    let camera = Rc::new(RefCell::new(CameraState {
-        pos: (glm::vec3(0.0, 0.0, 3.0)),
-        front: (glm::vec3(0.0, 0.0, -1.0)),
-        up: (glm::vec3(0.0, 1.0, 0.0)),
-
-        yaw: (-90.0),
-        pitch: (0.0),
-    }));
+    let camera = Rc::new(RefCell::new(camera::Camera::new(Some(vec3(0.0, 0.0, 3.0)), None, None,  None)));
     let mut last_time = 0 as f32;
 
     window.set_cursor_mode(glfw::CursorMode::Disabled);
@@ -258,33 +251,20 @@ fn main() {
     let camera_clone = camera.clone();
     window.set_cursor_pos_callback(move |_, x, y| {
         let mut cam = camera_clone.borrow_mut();
+
         if first_mouse {
             last_x = x as f32;
             last_y = y as f32;
 
             first_mouse = false;
         }
-
-        let mut x_offset = x as f32 - last_x;
-        let mut y_offset = last_y - y as f32;
+        
+        let x_offset = x as f32 - last_x;
+        let y_offset = last_y - y as f32;
         last_x = x as f32;
         last_y = y as f32;
 
-        const SENSITIVITY: f32 = 0.1;
-        x_offset *= SENSITIVITY;
-        y_offset *= SENSITIVITY;
-
-        cam.yaw += x_offset;
-        cam.pitch += y_offset;
-
-        cam.pitch = cam.pitch.clamp(-89.0, 90.0);
-
-        let mut direction = glm::Vec3::zeros();
-        direction.x = f32::cos(cam.yaw.to_radians()) * f32::cos(cam.pitch.to_radians());
-        direction.y = f32::sin(cam.pitch.to_radians());
-        direction.z = f32::sin(cam.yaw.to_radians()) * f32::cos(cam.pitch.to_radians());
-
-        cam.front = glm::normalize(&direction);
+        cam.process_mouse_movement(x_offset, y_offset, None);
     });
 
     while !window.should_close() {
@@ -297,12 +277,8 @@ fn main() {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
 
-            let view = glm::look_at(
-                &camera.borrow().pos,
-                &(camera.borrow().pos + camera.borrow().front),
-                &camera.borrow().up,
-            );
-            our_shader.set_mat4("view", &view);
+            let view = &camera.borrow().get_view_matrix();
+            our_shader.set_mat4("view", view);
 
             let projection = glm::perspective(800. / 600., f32::to_radians(45.), 0.1, 100.);
             our_shader.set_mat4("projection", &projection);
@@ -326,31 +302,21 @@ fn main() {
     }
 }
 
-fn process_input(window: &mut glfw::Window, cam: &mut CameraState, delta: f32) {
+fn process_input(window: &mut glfw::Window, cam: &mut camera::Camera, delta: f32) {
     if window.get_key(Key::Escape) == Action::Press {
         window.set_should_close(true);
     }
 
-    let camera_speed = 5. * delta;
     if window.get_key(Key::W) == Action::Press {
-        cam.pos += camera_speed * cam.front;
+        cam.process_keyboard(CameraMovement::Forward, delta);
     }
     if window.get_key(Key::S) == Action::Press {
-        cam.pos -= camera_speed * cam.front;
+        cam.process_keyboard(CameraMovement::Backward, delta);
     }
     if window.get_key(Key::A) == Action::Press {
-        cam.pos -= glm::normalize(&(glm::cross(&cam.front, &cam.up))) * camera_speed;
+        cam.process_keyboard(CameraMovement::Left, delta);
     }
     if window.get_key(Key::D) == Action::Press {
-        cam.pos += glm::normalize(&(glm::cross(&cam.front, &cam.up))) * camera_speed;
+        cam.process_keyboard(CameraMovement::Right, delta);
     }
-}
-
-struct CameraState {
-    pub pos: glm::Vec3,
-    pub front: glm::Vec3,
-    pub up: glm::Vec3,
-
-    pub yaw: f32,
-    pub pitch: f32,
 }
